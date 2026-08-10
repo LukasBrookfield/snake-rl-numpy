@@ -1,1 +1,1 @@
-# snake-rl-numpy
+# Reinforcement learning example with Snake
