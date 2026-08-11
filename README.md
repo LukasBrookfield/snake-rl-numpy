@@ -1,2 +1,2 @@
 # Reinforcement learning example with Snake
-***No LLMs were used in the writing of any code in this repository.***
+I built Snake with Python and Pygame, and trained a reinforcement learning agent to play it with a trained policy.
