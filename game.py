@@ -12,7 +12,7 @@ class Direction(enum.Enum):
 
 
 class SnakeGame:
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize game attributes"""
         self.snake = [[START_X, START_Y], [START_X - 1, START_Y]]
         self.direction = Direction.RIGHT
@@ -20,11 +20,11 @@ class SnakeGame:
         self.score = 0
         self.is_game_over = False
 
-    def next_state(self, action: int):
+    def next_state(self, action: int) -> None:
         """Progresses to next state of game."""
         if not self.is_game_over:
             self.update(action)
-            self.is_game_over = self.check_game_over(self.snake)
+            self.is_game_over = self.check_game_over()
         else:
             self.reset_snake_to_start()
 
@@ -88,7 +88,15 @@ class SnakeGame:
             pos = [random.randint(0, TILE_WIDTH - 1), random.randint(0, TILE_HEIGHT - 1)]
         return pos
 
-    def check_game_over(self, snake_sprite: list[list[int]]) -> bool:
+    def check_game_over(self) -> bool:
         """Calculates if the snake has lost. Returns a boolean (True if lost, False if not).""" 
-        return snake_sprite[0] in snake_sprite[1:] or snake_sprite[0][0] > (WINDOW_WIDTH - TILE_SIZE[0]) or snake_sprite[0][0] < 0 or snake_sprite[0][1] > (WINDOW_HEIGHT - TILE_SIZE[1]) or snake_sprite[0][1] < 0 or len(snake_sprite) >= ((WINDOW_WIDTH / TILE_SIZE[0]) * (WINDOW_HEIGHT / TILE_SIZE[1]))
+        head_x = self.snake[0][0]
+        head_y = self.snake[0][1]
 
+        out_of_bounds = head_x < 0 or head_x >= TILE_WIDTH or head_y < 0 or head_y >= TILE_HEIGHT
+        
+        hit_self = self.snake[0] in self.snake[1:]
+        
+        board_filled = len(self.snake) >= (TILE_WIDTH * TILE_HEIGHT)
+
+        return out_of_bounds or hit_self or board_filled

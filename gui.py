@@ -4,12 +4,12 @@ import random
 
 import pygame as pg
 
-from game import Direction
+from game import Direction, SnakeGame
 from settings import *
 
 
 class SnakeGameGUI:
-    def __init__(self, initial_move_delay: int = DEFAULT_INITIAL_MOVE_DELAY, move_delay: int = DEFAULT_MOVE_DELAY):
+    def __init__(self, initial_move_delay: int = DEFAULT_INITIAL_MOVE_DELAY, move_delay: int = DEFAULT_MOVE_DELAY) -> None:
         """Initialize game attributes"""
         pg.init()
         self.create_highscore_file()
@@ -32,7 +32,27 @@ class SnakeGameGUI:
         self.score = 0
         self.play_again = False
 
-    def start(self):
+    def visualise(self, game: SnakeGame) -> None:
+        """Visualises a trained AI bot playing the game."""
+        events = pg.event.get()
+        for event in events:
+            if event.type == pg.QUIT:
+                pg.quit()
+                return
+
+        self.snake_sprite = [[x * TILE_SIZE[0], y * TILE_SIZE[1]] for x, y in game.snake]
+        self.apple_pos = [game.apple_pos[0] * TILE_SIZE[0], game.apple_pos[1] * TILE_SIZE[1]]
+        self.score = game.score
+
+        self.draw_board(self.win)
+        self.draw_snake(self.win)
+        self.update_board(self.win, False, self.snake_sprite)
+
+        pg.display.update()
+        self.clock.tick(VISUALISATION_FPS)
+
+
+    def start(self) -> None:
         """Start game loop"""
         while True:
             events = pg.event.get()

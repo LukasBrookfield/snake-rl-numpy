@@ -12,16 +12,23 @@ class SnakeAI:
     # actions are relative to the direction of the snake head direction:
     # left, right, straight
     NUM_ACTIONS = 3
+    STEP_REWARD = 0
+    EAT_APPLE_REWARD = 10
+    DIE_REWARD = -10
 
     def __init__(self, 
-                 num_episodes: int = 1_000_000,
-                 discount_factor: float = 0.90,
-                 epsilon: float = 0.1,
+                 num_episodes: int = 10_000,
+                 discount_factor: float = 0.95,
+                 epsilon: float = 0.05,
+                 epsilon_min: float = 0.01,
+                 epsilon_decay: float = 0.995,
                  alpha: float = 0.1) -> None:
         """Initialise snake AI attrs"""
         self.num_episodes = num_episodes
         self.discount_factor = discount_factor
         self.epsilon = epsilon
+        self.epsilon_min = epsilon_min
+        self.epsilon_decay = epsilon_decay
         self.alpha = alpha
 
         # a dictionary where:
@@ -37,7 +44,14 @@ class SnakeAI:
 
     def train_q_learning(self, game: SnakeGame) -> None:
         """Trains the snake AI using Q-learning"""
+        epsilon = self.epsilon
+        epsilon_min = self.epsilon_min     
+        epsilon_decay = self.epsilon_decay
+
         for _ in range(self.num_episodes):
+            game.reset_snake_to_start()
+            game.is_game_over = False
+
             while not game.is_game_over:
                 # calculate current state vector using game instance
                 s = self.calculate_state_vector(game)
@@ -46,7 +60,7 @@ class SnakeAI:
                 q_vals = self.q_table[s]
 
                 # pick next action using ε-greedy with current policy
-                if random.random() < self.epsilon:
+                if random.random() < epsilon:
                     # pick random action
                     a = random.randint(0, 2)
                 else:
@@ -58,23 +72,21 @@ class SnakeAI:
                 game.next_state(a)
 
                 # add small -ve penalty for each step to encourage getting rewards quickly
-                r = -0.01
+                r = self.STEP_REWARD
 
                 # add +10 reward for eating apple
                 if game.score >= old_score + 1:
-                    r += 10
+                    r += self.EAT_APPLE_REWARD
 
                 # subtract -10 reward for ending game
                 if game.is_game_over:
-                    r -= 10
-
-                # calculate the state after action a
-                s_next = self.calculate_state_vector(game)
-
-                if game.is_game_over:
-                    # if the game ended, there are no future rewards possible
+                    r += self.DIE_REWARD
+                    # if game has ended, no more rewards are possible
                     next_max_q = 0.0
                 else:
+                    # calculate the state after action a
+                    s_next = self.calculate_state_vector(game)
+
                     # look up the next state in the table and find its max value
                     next_max_q = np.max(self.q_table[s_next])
 
@@ -84,15 +96,32 @@ class SnakeAI:
                 q = q_vals[a]
                 q_vals[a] = q + self.alpha * (r + self.discount_factor * next_max_q - q)
 
+                # decay epsilon at end of episode
+                if epsilon > epsilon_min:
+                    epsilon *= epsilon_decay
+
             game.is_game_over = False
 
 
-    def test(self, game: SnakeGame) -> None:
-        """Uses the lookup table to play the game optimally"""
-        pass
+    def test(self, game: SnakeGame, num_games: int = 2) -> None:
+        """Visualises the agent's policy in a real game."""
+        gui = SnakeGameGUI()
+        for _ in range(num_games):
+            game.reset_snake_to_start()
+            gui.reset_snake_to_start()
+            game.is_game_over = False
 
-        
+            while not game.is_game_over:
+                # choose optimal action according to policy
+                s = self.calculate_state_vector(game)
+                q_vals = self.q_table[s]
+                a = np.argmax(q_vals)
 
+                # advance game to next state
+                game.next_state(a)
+
+                # show the current state of the game on the screen
+                gui.visualise(game)
 
     @staticmethod
     def calculate_state_vector(game: SnakeGame) -> tuple:

@@ -12,7 +12,7 @@ def main() -> None:
         train_game = SnakeGame()
         ai.train_q_learning(train_game)
 
-        test_game = SnakeGameGUI()
+        test_game = SnakeGame()
         ai.test(test_game)
     else:
         game = SnakeGameGUI()
