@@ -97,11 +97,9 @@ class SnakeQLearning:
                 q = q_vals[a]
                 q_vals[a] = q + self.alpha * (r + self.discount_factor * next_max_q - q)
 
-                # decay epsilon at end of episode
-                if epsilon > epsilon_min:
-                    epsilon *= epsilon_decay
-
-            game.is_game_over = False
+            # decay epsilon at end of episode
+            if epsilon > epsilon_min:
+                epsilon *= epsilon_decay
 
 
     def test(self, game: SnakeGame, gui: SnakeGameGUI, num_games: int = 2) -> None:
