@@ -1,6 +1,7 @@
 import random
 from collections import defaultdict
 
+from tqdm import tqdm
 import numpy as np
 
 from game import SnakeGame, Direction
@@ -48,7 +49,7 @@ class SnakeQLearning:
         epsilon_min = self.epsilon_min     
         epsilon_decay = self.epsilon_decay
 
-        for _ in range(self.num_episodes):
+        for _ in tqdm(range(self.num_episodes), desc="Training..."):
             game.reset_snake_to_start()
             game.is_game_over = False
 
