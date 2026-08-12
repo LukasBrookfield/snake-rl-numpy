@@ -8,7 +8,7 @@ from gui import SnakeGameGUI
 from settings import *
 
 
-class SnakeAI:
+class SnakeQLearning:
     # actions are relative to the direction of the snake head direction:
     # left, right, straight
     NUM_ACTIONS = 3
@@ -103,9 +103,8 @@ class SnakeAI:
             game.is_game_over = False
 
 
-    def test(self, game: SnakeGame, num_games: int = 2) -> None:
+    def test(self, game: SnakeGame, gui: SnakeGameGUI, num_games: int = 2) -> None:
         """Visualises the agent's policy in a real game."""
-        gui = SnakeGameGUI()
         for _ in range(num_games):
             game.reset_snake_to_start()
             gui.reset_snake_to_start()

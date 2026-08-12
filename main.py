@@ -2,18 +2,19 @@ import sys
 
 from game import SnakeGame
 from gui import SnakeGameGUI
-from rl import SnakeAI
+from qlearning import SnakeQLearning
 
 
 def main() -> None:
     """Entry point to the program."""
     if "train" in sys.argv:
-        ai = SnakeAI()
+        ai = SnakeQLearning()
         train_game = SnakeGame()
         ai.train_q_learning(train_game)
 
         test_game = SnakeGame()
-        ai.test(test_game)
+        gui = SnakeGameGUI()
+        ai.test(test_game, gui)
     else:
         game = SnakeGameGUI()
         game.start()
