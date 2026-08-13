@@ -43,7 +43,7 @@ class SnakeQLearning:
         # as there are 2^11 = 2048 unique values for the state vector, there are 2048 keys in the dictionary
         self.q_table = defaultdict(lambda: np.zeros(self.NUM_ACTIONS))
 
-    def train_q_learning(self, game: SnakeGame) -> None:
+    def train(self, game: SnakeGame) -> None:
         """Trains the snake AI using Q-learning"""
         epsilon = self.epsilon
         epsilon_min = self.epsilon_min     
