@@ -11,17 +11,17 @@ from settings import *
 
 class SnakeDQN:
     def __init__(self,
-                 num_episodes: int = 150,  # 15_000
+                 num_episodes: int = 15_000,  # 15_000
                  discount_factor: float = 0.99,  # 0.99
                  epsilon: float = 1.0,  # 1.0
                  epsilon_min: float = 0.01,  # 0.01
-                 epsilon_decay: float = 0.995,  # 0.9995
-                 buffer_capacity: int = 5_000,  # 50_000
-                 sample_size: int = 6,  # 64
-                 C: int = 15,  # 1500
-                 step_reward: int = 0,
-                 apple_reward: int = 10,
-                 end_reward: int = -10):
+                 epsilon_decay: float = 0.9995,  # 0.9995
+                 buffer_capacity: int = 50_000,  # 50_000
+                 sample_size: int = 64,  # 64
+                 C: int = 1500,  # 1500
+                 step_reward: float = 0.0,  # 0
+                 apple_reward: float = 10,  # 10
+                 end_reward: float = -10):  # -10
         self.num_episodes = num_episodes
         self.discount_factor = discount_factor
         self.epsilon = epsilon
