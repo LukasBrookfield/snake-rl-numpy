@@ -1,5 +1,6 @@
 # My stuff
 highscore.txt
+dqn.pickle
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -38,7 +38,7 @@ class SnakeGameGUI:
         for event in events:
             if event.type == pg.QUIT:
                 pg.quit()
-                return
+                sys.exit()
 
         self.snake_sprite = [[x * TILE_SIZE[0], y * TILE_SIZE[1]] for x, y in game.snake]
         self.apple_pos = [game.apple_pos[0] * TILE_SIZE[0], game.apple_pos[1] * TILE_SIZE[1]]
@@ -101,19 +101,11 @@ class SnakeGameGUI:
             self.snake_sprite.insert(0, [head_x, head_y - TILE_SIZE[1]])
             self.last_movement = Direction.UP
 
-        self.snake_sprite.pop()
+        tail = self.snake_sprite.pop()
         self.delay = self.MOVE_DELAY
 
         if self.snake_sprite[0] == apple_pos:
-            tail = self.snake_sprite[-1]
-            if self.direction == Direction.RIGHT:
-                self.snake_sprite.append([tail[0] - TILE_SIZE[0], tail[1]])
-            elif self.direction == Direction.LEFT:
-                self.snake_sprite.append([tail[0] + TILE_SIZE[0], tail[1]])
-            elif self.direction == Direction.DOWN:
-                self.snake_sprite.append([tail[0], tail[1] - TILE_SIZE[1]])
-            elif self.direction == Direction.UP:
-                self.snake_sprite.append([tail[0], tail[1] + TILE_SIZE[1]])
+            self.snake_sprite.append(tail)
             return True
         else:
             return False

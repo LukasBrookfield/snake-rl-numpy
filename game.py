@@ -62,19 +62,11 @@ class SnakeGame:
         elif self.direction == Direction.UP:
             self.snake.insert(0, [head_x, head_y - 1])
 
-        self.snake.pop()
+        tail = self.snake.pop()
 
         apple_ate = False
         if self.snake[0] == self.apple_pos:
-            tail = self.snake[-1]
-            if self.direction == Direction.RIGHT:
-                self.snake.append([tail[0] - 1, tail[1]])
-            elif self.direction == Direction.LEFT:
-                self.snake.append([tail[0] + 1, tail[1]])
-            elif self.direction == Direction.DOWN:
-                self.snake.append([tail[0], tail[1] - 1])
-            elif self.direction == Direction.UP:
-                self.snake.append([tail[0], tail[1] + 1])
+            self.snake.append(tail)
             apple_ate = True
 
         if apple_ate:
@@ -100,3 +92,70 @@ class SnakeGame:
         board_filled = len(self.snake) >= (TILE_WIDTH * TILE_HEIGHT)
 
         return out_of_bounds or hit_self or board_filled
+
+    def get_state_features(self) -> tuple:
+        """Calculate the state vector (an numpy array) using the information provided by the game."""
+
+        # state vector includes: 
+        # 1.  danger_straight - is there danger 1 step ahead of head
+        # 2.  danger_left     - is there danger 1 step left of head
+        # 3.  danger_right    - is there danger 1 step right of head 
+        # 4.  dir_left        - is head direction left
+        # 5.  dir_right       - is head direction right
+        # 6.  dir_up          - is head direction up
+        # 7.  dir_down        - is head direction down
+        # 8.  food_left       - is food left of head
+        # 9.  food_right      - is food right of head
+        # 10. food_up         - is food above head
+        # 11. food_down       - is food below head
+
+        next_pos = lambda x,y: [self.snake[0][0] + x, self.snake[0][1] + y]
+        left = next_pos(-1, 0)
+        right = next_pos(1, 0)
+        up = next_pos(0, -1)
+        down = next_pos(0, 1)
+
+        if self.direction == Direction.LEFT:
+            next_straight = left
+            next_left = down
+            next_right = up
+        elif self.direction == Direction.RIGHT:
+            next_straight = right
+            next_left = up
+            next_right = down
+        elif self.direction == Direction.UP:
+            next_straight = up
+            next_left = left
+            next_right = right
+        else:
+            next_straight = down
+            next_left = right
+            next_right = left
+
+        is_danger = lambda p: (p[0] < 0) or (p[1] < 0) or (p[0] >= TILE_WIDTH) or (p[1] >= TILE_HEIGHT) or (p in self.snake)
+
+        danger_straight = 1 if is_danger(next_straight) else 0
+        danger_left = 1 if is_danger(next_left) else 0
+        danger_right = 1 if is_danger(next_right) else 0
+
+        dir_left = 1 if self.direction == Direction.LEFT else 0
+        dir_right = 1 if self.direction == Direction.RIGHT else 0
+        dir_up = 1 if self.direction == Direction.UP else 0
+        dir_down = 1 if self.direction == Direction.DOWN else 0
+
+        food_left = 1 if self.apple_pos[0] < self.snake[0][0] else 0
+        food_right = 1 if self.apple_pos[0] > self.snake[0][0] else 0
+        food_up = 1 if self.apple_pos[1] < self.snake[0][1] else 0
+        food_down = 1 if self.apple_pos[1] > self.snake[0][1] else 0
+
+        return (danger_straight,
+                danger_left,
+                danger_right,
+                dir_left,
+                dir_right,
+                dir_up,
+                dir_down,
+                food_left,
+                food_right,
+                food_up,
+                food_down)

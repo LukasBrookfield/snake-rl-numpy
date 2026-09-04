@@ -4,7 +4,7 @@ import pickle as pkl
 from tqdm import tqdm
 import numpy as np
 
-from game import SnakeGame
+from game import SnakeGame, NUM_STATE_FEATURES
 from gui import SnakeGameGUI
 from settings import *
 
@@ -21,7 +21,8 @@ class SnakeDQN:
                  C: int = 1500,  # 1500
                  step_reward: float = 0.0,  # 0
                  apple_reward: float = 10,  # 10
-                 end_reward: float = -10):  # -10
+                 end_reward: float = -10,  # -10
+                 max_steps_without_apple: int = 2 * TILE_WIDTH * TILE_HEIGHT):  # 510
         self.num_episodes = num_episodes
         self.discount_factor = discount_factor
         self.epsilon = epsilon
@@ -33,6 +34,8 @@ class SnakeDQN:
         self.step_reward = step_reward
         self.apple_reward = apple_reward
         self.end_reward = end_reward
+        # abandon an episode that goes this long without eating
+        self.max_steps_without_apple = max_steps_without_apple  
 
         self.Q = None  # action value function
 
@@ -54,17 +57,19 @@ class SnakeDQN:
 
         # initialise target action-value function Q_hat with weights
         Q_hat = DQNNeuralNetwork()
+        Q_hat.copy_weights(self.Q)
 
         for _ in tqdm(range(self.num_episodes), desc="Training..."):
 
             game.reset_snake_to_start()
             game.is_game_over = False
+            steps_since_apple = 0
 
             while not game.is_game_over:
                 s = self.calculate_state_vector(game)
 
                 # **********SAMPLING***********                
-                # With probability ε select a random action aself.Q.predict(s)
+                # With probability ε select a random action
                 if random.random() < epsilon:
                     a = np.random.randint(0, 3)
                 # otherwise select a = argmax Q(s,a)
@@ -84,6 +89,11 @@ class SnakeDQN:
                 # Store transition (s,a,r,s',d) in D
                 s_dash = self.calculate_state_vector(game)
                 buffer.add(s, a, r, s_dash, d)
+
+                # Give up on an episode that is making no progress
+                steps_since_apple = 0 if game.score > old_score else steps_since_apple + 1
+                if steps_since_apple >= self.max_steps_without_apple:
+                    break
 
                 # *********TRAINING*********
                 # Wait until there are enough transitions to fill sample
@@ -117,16 +127,28 @@ class SnakeDQN:
                 epsilon *= epsilon_decay
 
 
-        with open("dqn.pickle", "wb") as file:
+        self.save()
+
+    def save(self, file_name: str = DQN_MODEL_FILE_NAME) -> None:
+        """Saves the trained action-value function so it can be replayed without retraining."""
+        with open(file_name, "wb") as file:
             pkl.dump(self.Q, file)
 
+    def load(self, file_name: str = DQN_MODEL_FILE_NAME) -> None:
+        """Loads an action-value function saved by a previous training run."""
+        with open(file_name, "rb") as file:
+            self.Q = pkl.load(file)
 
     def test(self, game: SnakeGame, gui: SnakeGameGUI, num_games: int = 3) -> None:
         """Visualises the agent's policy in a real game."""
+        if self.Q is None:
+            raise RuntimeError("there is no model to test: call train() or load() first")
+
         for _ in range(num_games):
             game.reset_snake_to_start()
             gui.reset_snake_to_start()
             game.is_game_over = False
+            steps_since_apple = 0
 
             while not game.is_game_over:
                 # choose optimal action according to policy
@@ -134,35 +156,24 @@ class SnakeDQN:
                 a = np.argmax(self.Q.predict(s))
 
                 # advance game to next state
+                old_score = game.score
                 game.next_state(a)
 
                 # show the current state of the game on the screen
                 gui.visualise(game)
 
+                # stop watching a snake that is just going round in circles
+                steps_since_apple = 0 if game.score > old_score else steps_since_apple + 1
+                if steps_since_apple >= self.max_steps_without_apple:
+                    break
+
     def calculate_state_vector(self, game: SnakeGame) -> np.ndarray:
         """
         Calculate state vector based of game information.
-        It consists of a flattened array of 3 15x17 grids (so length 765):
-        1. one hot encoded position of head
-        2. one hot encoded positions of body
-        3. one hot encoded position of apple
+        It is the same 11 features the tabular agent uses, as an array of floats:
+        3 danger flags, 4 heading flags and 4 apple direction flags.
         """
-        head_one_hot = np.zeros(255)
-        hx, hy = game.snake[0]
-        if 0 <= hx < TILE_WIDTH and 0 <= hy < TILE_HEIGHT:
-            head_one_hot[hx + TILE_WIDTH * hy] = 1
-
-        body_one_hot = np.zeros(255)
-        for bx, by in game.snake[1:]:
-            if 0 <= bx < TILE_WIDTH and 0 <= by < TILE_HEIGHT:
-                body_one_hot[bx + TILE_WIDTH * by] = 1
-
-        apple_one_hot = np.zeros(255)
-        ax, ay = game.apple_pos
-        if 0 <= ax < TILE_WIDTH and 0 <= ay < TILE_HEIGHT:
-            apple_one_hot[ax + TILE_WIDTH * ay] = 1
-
-        return np.hstack([head_one_hot, body_one_hot, apple_one_hot])
+        return np.array(game.get_state_features(), dtype=float)
 
 
 class ReplayMemoryBuffer:
@@ -171,10 +182,10 @@ class ReplayMemoryBuffer:
         self.capacity = capacity
         self.size = 0
         self._curr_pos = 0
-        self._states = np.empty(shape=(capacity, 765), dtype=float)
+        self._states = np.empty(shape=(capacity, NUM_STATE_FEATURES), dtype=float)
         self._actions = np.empty(shape=capacity, dtype=int)
         self._rewards = np.empty(shape=capacity, dtype=float)
-        self._next_states = np.empty(shape=(capacity, 765), dtype=float)
+        self._next_states = np.empty(shape=(capacity, NUM_STATE_FEATURES), dtype=float)
         self._is_done = np.empty(shape=capacity, dtype=bool)
 
     def add(self, s: np.ndarray, a: int, r: float, s_dash: np.ndarray, d: bool) -> None:
@@ -194,8 +205,7 @@ class ReplayMemoryBuffer:
 
     def sample(self, sample_size: int) -> tuple:
         """Sample n random elements from the buffer and return them as a tuple."""
-        # get indices of random sample of size 'sample_size'
-        sample = np.random.choice(a=self.size, size=sample_size, replace=False)
+        sample = np.random.randint(0, self.size, size=sample_size)
 
         # access samples using indices
         states_sample = self._states[sample]
@@ -214,7 +224,7 @@ class DQNNeuralNetwork:
 
         # He initialisation for weights (optimal for ReLU)
         # weights and biases for 1st layer
-        self.W1 = np.random.randn(765, 256) * np.sqrt(2.0 / 765)
+        self.W1 = np.random.randn(NUM_STATE_FEATURES, 256) * np.sqrt(2.0 / NUM_STATE_FEATURES)
         self.b1 = np.zeros(256)
 
         # weights and biases for 2nd layer
@@ -271,7 +281,7 @@ class DQNNeuralNetwork:
         return (Z > 0).astype(float)
     
     def forward_prop(self, X: np.ndarray) -> tuple:
-        """Performs forward propagation on neural network. X must be of shape (765,)"""
+        """Performs forward propagation on neural network. X must be of shape (NUM_STATE_FEATURES,)"""
         Z1 = np.dot(X, self.W1) + self.b1
         A1 = self.ReLU(Z1)
 
