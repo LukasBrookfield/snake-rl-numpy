@@ -4,18 +4,18 @@ import pickle as pkl
 from tqdm import tqdm
 import numpy as np
 
-from game import SnakeGame, NUM_STATE_FEATURES
+from game import SnakeGame, NUM_GRID_FEATURES
 from gui import SnakeGameGUI
 from settings import *
 
 
 class SnakeDQN:
     def __init__(self,
-                 num_episodes: int = 15_000,  # 15_000
+                 num_episodes: int = 25_000,  # 25_000
                  discount_factor: float = 0.99,  # 0.99
                  epsilon: float = 1.0,  # 1.0
                  epsilon_min: float = 0.01,  # 0.01
-                 epsilon_decay: float = 0.9995,  # 0.9995
+                 epsilon_decay: float = 0.9997,  # 0.9997
                  buffer_capacity: int = 50_000,  # 50_000
                  sample_size: int = 64,  # 64
                  C: int = 1500,  # 1500
@@ -170,10 +170,10 @@ class SnakeDQN:
     def calculate_state_vector(self, game: SnakeGame) -> np.ndarray:
         """
         Calculate state vector based of game information.
-        It is the same 11 features the tabular agent uses, as an array of floats:
-        3 danger flags, 4 heading flags and 4 apple direction flags.
+        It is the whole board, followed by
+        the same 11 features the tabular agent uses.
         """
-        return np.array(game.get_state_features(), dtype=float)
+        return game.get_grid_state()
 
 
 class ReplayMemoryBuffer:
@@ -182,10 +182,10 @@ class ReplayMemoryBuffer:
         self.capacity = capacity
         self.size = 0
         self._curr_pos = 0
-        self._states = np.empty(shape=(capacity, NUM_STATE_FEATURES), dtype=float)
+        self._states = np.empty(shape=(capacity, NUM_GRID_FEATURES), dtype=np.float32)
         self._actions = np.empty(shape=capacity, dtype=int)
         self._rewards = np.empty(shape=capacity, dtype=float)
-        self._next_states = np.empty(shape=(capacity, NUM_STATE_FEATURES), dtype=float)
+        self._next_states = np.empty(shape=(capacity, NUM_GRID_FEATURES), dtype=np.float32)
         self._is_done = np.empty(shape=capacity, dtype=bool)
 
     def add(self, s: np.ndarray, a: int, r: float, s_dash: np.ndarray, d: bool) -> None:
@@ -224,7 +224,7 @@ class DQNNeuralNetwork:
 
         # He initialisation for weights (optimal for ReLU)
         # weights and biases for 1st layer
-        self.W1 = np.random.randn(NUM_STATE_FEATURES, 256) * np.sqrt(2.0 / NUM_STATE_FEATURES)
+        self.W1 = np.random.randn(NUM_GRID_FEATURES, 256) * np.sqrt(2.0 / NUM_GRID_FEATURES)
         self.b1 = np.zeros(256)
 
         # weights and biases for 2nd layer
@@ -281,7 +281,7 @@ class DQNNeuralNetwork:
         return (Z > 0).astype(float)
     
     def forward_prop(self, X: np.ndarray) -> tuple:
-        """Performs forward propagation on neural network. X must be of shape (NUM_STATE_FEATURES,)"""
+        """Performs forward propagation on neural network. X must be of shape (NUM_GRID_FEATURES,)"""
         Z1 = np.dot(X, self.W1) + self.b1
         A1 = self.ReLU(Z1)
 

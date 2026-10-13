@@ -1,6 +1,8 @@
 import enum
 import random
 
+import numpy as np
+
 from settings import *
 
 
@@ -159,3 +161,28 @@ class SnakeGame:
                 food_right,
                 food_up,
                 food_down)
+
+    def get_grid_state(self) -> np.ndarray:
+        """Calculate the state vector (a numpy array) from the whole board plus the 11 state features."""
+
+        # the board is split into 3 channels, each the size of the board:
+        # 1. body  - the body (not the head), scaled from 1 just behind the head down to 1/n at the tail,
+        #            so the order of the body (and which squares free up first) is known
+        # 2. head  - 1 where the head is
+        # 3. apple - 1 where the apple is
+        grid = np.zeros((3, TILE_HEIGHT, TILE_WIDTH))
+
+        body = self.snake[1:]
+        for i, (x, y) in enumerate(body):
+            grid[0, y, x] = (len(body) - i) / len(body)
+
+        # the head is off the board after hitting a wall
+        head_x, head_y = self.snake[0]
+        if 0 <= head_x < TILE_WIDTH and 0 <= head_y < TILE_HEIGHT:
+            grid[1, head_y, head_x] = 1
+
+        grid[2, self.apple_pos[1], self.apple_pos[0]] = 1
+
+        # the 11 features give the head direction, immediate danger and food direction,
+        # which are hard to learn from the raw board alone
+        return np.concatenate((grid.ravel(), self.get_state_features()))
