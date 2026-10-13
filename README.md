@@ -6,6 +6,14 @@
     - Epsilon-greedy exploration, with epsilon decay
     - My own neural network trained with stochastic gradient descent (SGD)
     - Experience replay with fixed size buffer of past steps
+## Results table
+
+| Agent | Mean apples/game | Std | Median | Max | Games |
+|---|---|---|---|---|---|
+| DQN | 31.91 | 10.93 | 32 | 62 | 3,000 |
+| Tabular Q-learning | 23.65 | 9.15 | 23 | 60 | 3,000 |
+| Random policy | 0.12 | 0.35 | 0 | 3 | 3,000 |
+## How to run
 ```bash
 # play snake for yourself:
 python main.py
